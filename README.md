@@ -20,3 +20,9 @@ This repository's original README only states the project goal. Before treating 
 ## Production readiness
 
 Treat this as a development toolkit until transport compatibility, authentication, authorization, logging, and test coverage have been verified against the actual implementation.
+
+## Explore more
+
+- [Multi-Agent Software Engineer](https://github.com/HardikPaghdar/multi-agent-software-engineer) — human-supervised task planning.
+- [Production RAG Pipeline](https://github.com/HardikPaghdar/production-rag-pipeline) — retrieval, reranking, citations, and evaluation.
+- [More projects on my portfolio](https://hardikpaghdar.netlify.app/).
