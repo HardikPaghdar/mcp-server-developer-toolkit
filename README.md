@@ -1,28 +1,92 @@
 # MCP Server Developer Toolkit
 
-A developer toolkit for exposing a small set of permission-controlled tools to compatible AI clients.
+A small Model Context Protocol (MCP) server that exposes read-only project-workspace tools to compatible MCP clients. It uses the Python MCP SDK's FastMCP interface and provides bounded file listing, file reading, and literal text search.
 
-## Project status
+> **Scope:** This is a local developer-workspace tool server, not a general-purpose coding agent. It does not edit files, run shell commands, execute tests, or connect to GitHub. The server uses the SDK's configured stdio transport when started with `mcp.run()`.
 
-This repository's original README only states the project goal. Before treating it as a reusable package, inspect the current source and confirm which tools, transports, authentication options, and client integrations are implemented. Do not assume that every feature of a production MCP server is included.
+## Tools exposed
 
-## Suggested review checklist
+| Tool | Inputs | Behavior |
+|---|---|---|
+| `list_project_files` | `limit` (1–500) | Lists eligible files under the configured workspace root |
+| `read_project_file` | `path` | Reads an eligible file using a relative path |
+| `search_project_text` | `query`, `limit` (1–100) | Performs case-insensitive literal line search |
 
-- Document the supported MCP protocol version and transport.
-- List each available tool with its input schema and side effects.
-- Keep tool permissions allowlisted and least-privilege.
-- Validate tool inputs and bound result sizes.
-- Make write-capable actions explicit and require human approval where appropriate.
-- Add automated tests for invalid inputs, denied permissions, and tool failures.
-- Provide exact install/run commands and a minimal client configuration example.
-- Never hard-code credentials or expose a local developer server to untrusted networks.
+Eligible extensions are `.py`, `.js`, `.ts`, `.md`, `.txt`, `.json`, `.yaml`, and `.toml`. Hidden VCS/virtual-environment/dependency folders are skipped, symlinks are excluded, and individual files larger than 500 KB are ignored.
 
-## Production readiness
+## Architecture
 
-Treat this as a development toolkit until transport compatibility, authentication, authorization, logging, and test coverage have been verified against the actual implementation.
+```mermaid
+flowchart TD
+    Client[Compatible MCP client] <-->|stdio MCP transport| Server[FastMCP server]
+    Server --> Tools[Three read-only tools]
+    Tools --> Guard[Workspace path and file filters]
+    Guard --> Root[PROJECT_ROOT directory]
+```
 
-## Explore more
+## Requirements and installation
 
-- [Multi-Agent Software Engineer](https://github.com/HardikPaghdar/multi-agent-software-engineer) — human-supervised task planning.
-- [Production RAG Pipeline](https://github.com/HardikPaghdar/production-rag-pipeline) — retrieval, reranking, citations, and evaluation.
-- [More projects on my portfolio](https://hardikpaghdar.netlify.app/).
+Requirements: Python 3.10+ and a compatible version of the MCP Python SDK.
+
+```bash
+git clone https://github.com/HardikPaghdar/mcp-server-developer-toolkit.git
+cd mcp-server-developer-toolkit
+python -m venv .venv
+source .venv/bin/activate
+# Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+## Run the server
+
+Set `PROJECT_ROOT` to the directory the MCP tools are allowed to inspect:
+
+```bash
+export PROJECT_ROOT="/absolute/path/to/your/project"
+python -m mcp_devtools.server
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:PROJECT_ROOT = "C:\\path\\to\\your\\project"
+python -m mcp_devtools.server
+```
+
+The process communicates with its MCP client over stdio. Configure the client to launch this command in the repository's virtual environment and set the same `PROJECT_ROOT` environment variable. See [docs/client-setup.md](docs/client-setup.md) for the client configuration notes.
+
+## Example project
+
+A small sample workspace is available in [examples/sample_project](examples/sample_project).
+
+## Security model and limitations
+
+- Tools are read-only: there are no file-write or shell-execution tools.
+- Paths must be relative and are resolved under the configured workspace root.
+- Symlink access is rejected; selected file extensions and size limits reduce accidental exposure.
+- Search is literal and case-insensitive, not semantic or embedding-based.
+- The implementation is intended for a trusted local developer environment. It does not implement user authentication, network authorization, audit logging, or per-user workspace isolation.
+- Do not point `PROJECT_ROOT` at directories containing secrets unless exposing their contents to the connected MCP client is intentional.
+- A path filter is not a complete sandbox against every possible filesystem race or platform-specific edge case.
+
+## Tests
+
+```bash
+pytest
+```
+
+The GitHub Actions workflow runs the test suite on pushes and pull requests.
+
+## Repository layout
+
+- `mcp_devtools/server.py` — FastMCP server and tool registration
+- `mcp_devtools/tools.py` — workspace scanning, validation, reading, and search
+- `tests/` — tool behavior tests
+- `docs/client-setup.md` — client setup notes
+- `examples/sample_project/` — sample workspace
+
+## Related projects
+
+- [MCP AI Developer Assistant](https://github.com/HardikPaghdar/mcp-ai-developer-assistant)
+- [Codebase RAG AI Developer](https://github.com/HardikPaghdar/codebase-rag-ai-developer)
+- [More projects on my portfolio](https://hardikpaghdar.netlify.app/)
